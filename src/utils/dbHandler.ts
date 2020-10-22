@@ -1,5 +1,5 @@
 import mongodb from "mongodb";
-import ISchema from './schema.interface';
+import ISchema from "./schema.interface";
 import IProperty from "./property.interface";
 
 export class DBHandler {
@@ -15,36 +15,22 @@ export class DBHandler {
     await this.dbClient.close();
   }
 
-  public static async createCollection(collectionName: string, msg: ISchema) {
-    const validator = this.msgToValidatorParser(msg);
-    this.dbClient.db(this.dbName).collection(collectionName)
-    return await this.dbClient.db(this.dbName)
-      .createCollection(collectionName, {
-        validator,
-        validationAction: "error",
-      });
+  public static async createCollection(schema: ISchema) {
+    return await this.dbClient
+      .db(this.dbName)
+      .createCollection(schema.schemaName);
   }
 
-  private static msgToValidatorParser(msg: ISchema): {} {
-    const properties = Object.fromEntries(
-      msg.schemaProperties.map((prop: IProperty) => 
-      [prop.propertyName, {
-        bsonType: prop.propertyType,
-        unique: prop.isUnique,
-        enum?: prop.enum
-      }]
-      ));
-    const validator = {
-      $jsonSchema: {
-        bsonType: "object",
-        required: msg.schemaProperties
-          .filter((prop: IProperty) => !!prop.required)
-          .map((prop: IProperty) => prop.propertyName),
-        properties: {
-
-        } 
-      },
-    }
-    return {};
+  public static async handleSchemaCreation(schema: ISchema) {
+    const collection = await this.createCollection(schema);
+    const indexAndUniqueProps = schema.schemaProperties.filter(
+      (prop) => prop.isUnique || prop.index
+    );
+    
+    await Promise.all(
+      indexAndUniqueProps.map(
+        async (prop) => await collection.createIndex(prop.propertyName)
+      )
+    );
   }
 }
