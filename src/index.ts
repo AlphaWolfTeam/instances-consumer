@@ -1,12 +1,14 @@
-import { DBHandler } from './utils/dbHandler';
-import { config } from './config';
+import { DBConnection } from "./utils/dbConnection";
+import { config } from "./config";
+import Server from "./server";
 
 process.on("uncaughtException", console.error);
 
-(async () => {
-    try {
-	
-    } catch (error) {
-        console.error(error);
-    }
-})
+async () => {
+  try {
+    await DBConnection.connect(config.mongo.uri);
+    const server = new Server().initialize(config.rabbit);
+  } catch (error) {
+    console.error(error);
+  }
+};
